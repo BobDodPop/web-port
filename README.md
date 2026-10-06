@@ -1,7 +1,3 @@
-# web-port
-
-all games are hosted on https://gn-math.github.io
-
 ## Full Game List + Credits
 - [Amanda The Adventurer](https://github.com/genizy/web-port/tree/main/amanda-the-adventurer) - Ported by [me](https://github.com/genizy)
 - [Andy's Apple Farm](https://github.com/genizy/web-port/tree/main/andys-apple-farm) - Ported by [me](https://github.com/genizy)
