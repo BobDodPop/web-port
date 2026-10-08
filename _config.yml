@@ -1,0 +1,15 @@
+# GitHub Pages Jekyll configuration
+# Excludes to reduce deployment size
+exclude:
+  - .git
+  - .gitmodules
+  - .removal-marker
+  - .github
+  - node_modules
+  - "*.md"
+
+# Keep assets uncompressed initially for better compatibility
+compress_output: false
+
+# Disable Jekyll processing for faster builds
+layout: null
