@@ -4,23 +4,59 @@
     <base href="https://cdn.jsdelivr.net/gh/genizy/web-port@latest/baldi-plus/">
     <meta charset="utf-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, viewport-fit=cover, shrink-to-fit=yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Unity WebGL Player | Baldi's Basics Plus</title>
     <link rel="shortcut icon" href="TemplateData/favicon.ico">
     <link rel="stylesheet" href="TemplateData/style.css">
-  </head>
-  <body>
-        <div
-      id="loading-text"
-      style="
+    <style>
+      html, body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        overflow: hidden;
+        background: #000;
+        touch-action: manipulation;
+      }
+      body {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      #unity-container {
+        width: 100vw;
+        height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      #unity-canvas {
+        width: 100vw !important;
+        height: 100vh !important;
+        max-width: 100% !important;
+        max-height: 100% !important;
+        touch-action: none;
+      }
+      #unity-loading-bar {
+        display: block;
+      }
+      #loading-text {
+        position: fixed;
+        top: 16px;
+        left: 50%;
+        transform: translateX(-50%);
         color: black;
         font-size: 48px;
         font-family: cursive;
         text-align: center;
-        margin-top: 20px;
-      "
-    >
-      LOADING...
-    </div>
+        z-index: 2;
+        pointer-events: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="loading-text">LOADING...</div>
     <div id="unity-container" class="unity-desktop">
       <canvas id="unity-canvas" width=960 height=600></canvas>
       <div id="unity-loading-bar">
@@ -31,7 +67,7 @@
       </div>
     </div>
 
-      <script>
+    <script>
       const loadingText = document.querySelector("#loading-text");
       let totalBytes = 315673804.8;
       let loadedBytes = 0;
@@ -47,6 +83,7 @@
           return bytes + " B";
         }
       }
+
       async function fetchWithProgress(url) {
         const response = await fetch(url);
         const reader = response.body.getReader();
@@ -60,10 +97,7 @@
           chunks.push(value);
           const doneText = formatSize(loadedBytes);
           const totalText = formatSize(totalBytes);
-          const percent =
-            totalBytes > 0
-              ? ((loadedBytes / totalBytes) * 100).toFixed(1)
-              : "?";
+          const percent = totalBytes > 0 ? ((loadedBytes / totalBytes) * 100).toFixed(1) : "?";
           loadingText.textContent = `LOADING... ${doneText} / ${totalText} (${percent}%)`;
         }
         let fullBuffer = new Uint8Array(received);
@@ -74,6 +108,7 @@
         }
         return fullBuffer.buffer;
       }
+
       async function mergeFiles(parts) {
         const buffers = await Promise.all(parts.map(fetchWithProgress));
         return URL.createObjectURL(new Blob(buffers));
@@ -86,56 +121,38 @@
         }
         return parts;
       }
+
       (async () => {
         const dataParts = getParts("Build/BaldiPlusNew.data", 5);
         const wasmParts = getParts("Build/BaldiPlusNew.wasm", 2);
-        const allParts = [...dataParts, ...wasmParts];
         const [dataUrl, wasmUrl] = await Promise.all([
           mergeFiles(dataParts),
           mergeFiles(wasmParts),
         ]);
-        var container = document.querySelector("#unity-container");
+
         var canvas = document.querySelector("#unity-canvas");
         var loadingBar = document.querySelector("#unity-loading-bar");
-        var progressBarFull = document.querySelector(
-          "#unity-progress-bar-full"
-        );
-        var warningBanner = document.querySelector("#unity-warning");
+        var progressBarFull = document.querySelector("#unity-progress-bar-full");
 
-        // Shows a temporary message banner/ribbon for a few seconds, or
-        // a permanent error message on top of the canvas if type=='error'.
-        // If type=='warning', a yellow highlight color is used.
-        // Modify or remove this function to customize the visually presented
-        // way that non-critical warnings and error messages are presented to the
-        // user.
         function unityShowBanner(msg, type) {}
 
-      var buildUrl = "Build";
-      var loaderUrl = buildUrl + "/BaldiPlusNew.loader.js";
-      var config = {
-        dataUrl: dataUrl,
-        frameworkUrl: buildUrl + "/BaldiPlusNew.framework.js",
-        codeUrl: wasmUrl,
-        streamingAssetsUrl: "StreamingAssets",
-        companyName: "Basically Games",
-        productName: "Baldi's Basics Plus",
-        productVersion: "0.12.2a",
-        showBanner: unityShowBanner,
-      };
-
-        // By default Unity keeps WebGL canvas render target size matched with
-        // the DOM size of the canvas element (scaled by window.devicePixelRatio)
-        // Set this to false if you want to decouple this synchronization from
-        // happening inside the engine, and you would instead like to size up
-        // the canvas DOM size and WebGL render target sizes yourself.
-        // config.matchWebGLToCanvasSize = false;
+        var buildUrl = "Build";
+        var loaderUrl = buildUrl + "/BaldiPlusNew.loader.js";
+        var config = {
+          dataUrl: dataUrl,
+          frameworkUrl: buildUrl + "/BaldiPlusNew.framework.js",
+          codeUrl: wasmUrl,
+          streamingAssetsUrl: "StreamingAssets",
+          companyName: "Basically Games",
+          productName: "Baldi's Basics Plus",
+          productVersion: "0.12.2a",
+          showBanner: unityShowBanner,
+        };
 
         if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-          // Mobile device style: fill the whole browser client area with the game canvas:
           var meta = document.createElement("meta");
           meta.name = "viewport";
-          meta.content =
-            "width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes";
+          meta.content = "width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes";
           document.getElementsByTagName("head")[0].appendChild(meta);
         }
 
