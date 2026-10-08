@@ -4,31 +4,32 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Web Port Game Library</title>
-  <!-- Service Worker for SharedArrayBuffer / WASM multithreading support -->
-  <script src="coi-serviceworker.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/coi-serviceworker@0.1.7/coi-serviceworker.min.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       display: flex;
-      height: 100vh;
+      min-height: 100vh;
       background: #121212;
       color: #fff;
-      font-family: sans-serif;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       overflow: hidden;
     }
 
-    /* Sidebar Navigation */
     #sidebar {
-      width: 260px;
+      width: 280px;
       background: #1e1e24;
       display: flex;
       flex-direction: column;
       border-right: 1px solid #333;
+      box-shadow: 2px 0 8px rgba(0,0,0,0.3);
     }
     #sidebar h2 {
       padding: 16px;
-      font-size: 1.2rem;
+      font-size: 1.3rem;
       border-bottom: 1px solid #333;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      font-weight: 700;
     }
     #game-list {
       flex: 1;
@@ -36,6 +37,11 @@
       list-style: none;
       padding: 10px;
     }
+    #game-list::-webkit-scrollbar { width: 8px; }
+    #game-list::-webkit-scrollbar-track { background: #1e1e24; }
+    #game-list::-webkit-scrollbar-thumb { background: #444; border-radius: 4px; }
+    #game-list::-webkit-scrollbar-thumb:hover { background: #555; }
+
     .game-btn {
       width: 100%;
       padding: 12px;
@@ -46,28 +52,45 @@
       border-radius: 6px;
       text-align: left;
       cursor: pointer;
-      transition: background 0.2s, color 0.2s;
+      transition: all 0.2s ease;
+      font-size: 0.95rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
-    .game-btn:hover, .game-btn.active {
-      background: #4f46e5;
+    .game-btn:hover { background: #374151; border-color: #667eea; transform: translateX(4px); }
+    .game-btn.active {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       color: #fff;
+      border-color: #667eea;
+      font-weight: 600;
     }
 
-    /* Game Viewport Container */
     #main-content {
       flex: 1;
       display: flex;
       flex-direction: column;
       position: relative;
+      min-width: 0;
     }
     #toolbar {
-      height: 48px;
-      background: #1e1e24;
+      height: 56px;
+      background: linear-gradient(135deg, #1e1e24 0%, #2a2a32 100%);
       display: flex;
       align-items: center;
       justify-content: space-between;
       padding: 0 16px;
       border-bottom: 1px solid #333;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+    #current-title {
+      font-size: 1.1rem;
+      font-weight: 500;
+      flex: 1;
+      min-width: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     #game-frame {
       flex: 1;
@@ -75,25 +98,85 @@
       height: 100%;
       border: none;
       background: #000;
+      position: relative;
+    }
+    .controls {
+      display: flex;
+      gap: 8px;
+      flex-shrink: 0;
     }
     .controls button {
       background: #374151;
       color: #fff;
-      border: none;
-      padding: 6px 12px;
-      border-radius: 4px;
+      border: 1px solid #4b5563;
+      padding: 8px 16px;
+      border-radius: 6px;
       cursor: pointer;
-      margin-left: 8px;
+      font-weight: 500;
+      transition: all 0.2s;
+      font-size: 0.9rem;
     }
     .controls button:hover {
-      background: #4b5563;
+      background: #667eea;
+      border-color: #667eea;
+      transform: scale(1.02);
+    }
+    #error-message {
+      display: none;
+      position: absolute;
+      top: 56px;
+      left: 0;
+      right: 0;
+      background: #dc2626;
+      color: #fff;
+      padding: 12px 16px;
+      border-bottom: 1px solid #991b1b;
+      z-index: 100;
+      font-size: 0.9rem;
+    }
+    #error-message.show { display: block; animation: slideDown 0.3s ease-out; }
+    @keyframes slideDown {
+      from { transform: translateY(-100%); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    .loading-spinner {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 50px;
+      height: 50px;
+      border: 4px solid #374151;
+      border-top-color: #667eea;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      z-index: 10;
+    }
+    @keyframes spin { to { transform: translate(-50%, -50%) rotate(360deg); } }
+
+    #search-box {
+      width: calc(100% - 20px);
+      padding: 10px;
+      margin: 8px 10px;
+      margin-top: 0;
+      background: #2a2a32;
+      border: 1px solid #3d3d4a;
+      border-radius: 6px;
+      color: #ccc;
+      font-size: 0.9rem;
+    }
+    #search-box::placeholder { color: #888; }
+    #search-box:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 8px rgba(102, 126, 234, 0.3);
     }
   </style>
 </head>
 <body>
-
   <div id="sidebar">
-    <h2>🕹️ Game Library</h2>
+    <h2>🎮 Game Library</h2>
+    <input type="text" id="search-box" placeholder="Search games..." aria-label="Search games">
     <ul id="game-list"></ul>
   </div>
 
@@ -101,74 +184,159 @@
     <div id="toolbar">
       <span id="current-title">Select a game to play</span>
       <div class="controls">
-        <button id="reload-btn">Restart</button>
-        <button id="fullscreen-btn">Fullscreen</button>
+        <button id="restart-btn" title="Restart the current game">🔄 Restart</button>
+        <button id="fullscreen-btn" title="Play in fullscreen">⛶ Fullscreen</button>
       </div>
     </div>
-    <iframe id="game-frame" allow="autoplay; fullscreen; gamepad; focus-without-user-activation" allowfullscreen></iframe>
+    <div id="error-message"></div>
+    <iframe id="game-frame" allow="autoplay; fullscreen; gamepad; focus-without-user-activation; accelerometer; gyroscope; payment" allowfullscreen></iframe>
+    <div class="loading-spinner" id="loading-spinner" style="display: none;"></div>
   </div>
 
   <script>
-    // List games matching folder names in web-port
     const games = [
-      { id: "amanda-the-adventurer", name: "Amanda The Adventurer", path: "./amanda-the-adventurer/index.html" },
-      { id: "andys-apple-farm", name: "Andy's Apple Farm", path: "./andys-apple-farm/index.html" },
-      { id: "baldi-remaster", name: "Baldi's Basics Classic Remastered", path: "./baldi-remaster/index.html" },
-      { id: "baldi-plus", name: "Baldi's Basics Plus", path: "./baldi-plus/index.html" },
-      { id: "buckshot-roulette", name: "Buckshot Roulette", path: "./buckshot-roulette/index.html" },
-      { id: "cuphead", name: "Cuphead", path: "./cuphead/index.html" },
-      { id: "omori", name: "OMORI", path: "./omori/index.html" },
-      { id: "pizza-tower", name: "Pizza Tower", path: "./pizza-tower/index.html" },
-      { id: "raft", name: "Raft", path: "./raft/index.html" }
+      { id: 'amanda-the-adventurer', name: 'Amanda The Adventurer', path: './amanda-the-adventurer/index.html' },
+      { id: 'andys-apple-farm', name: "Andy's Apple Farm", path: './andys-apple-farm/index.html' },
+      { id: 'baldi-remaster', name: "Baldi's Basics Remastered", path: './baldi-remaster/index.html' },
+      { id: 'baldi-plus', name: "Baldi's Basics Plus", path: './baldi-plus/index.html' },
+      { id: 'bendy', name: 'Bendy & The Ink Machine', path: './bendy/index.html' },
+      { id: 'bergentruck', name: 'BERGENTRUCK 201x', path: './bergentruck/index.html' },
+      { id: 'bloodmoney', name: 'BLOODMONEY!', path: './bloodmoney/index.html' },
+      { id: 'buckshot-roulette', name: 'Buckshot Roulette', path: './buckshot-roulette/index.html' },
+      { id: 'class-of-09', name: "Class of '09", path: './class-of-09/index.html' },
+      { id: 'cuphead', name: 'Cuphead', path: './cuphead/index.html' },
+      { id: 'dead-plate', name: 'Dead Plate', path: './dead-plate/index.html' },
+      { id: 'deadseat', name: 'Deadseat', path: './deadseat/index.html' },
+      { id: 'deltatraveler', name: 'Delta Traveler', path: './deltatraveler/index.html' },
+      { id: 'donottakethiscathome', name: 'Do NOT Take This Cat Home', path: './donottakethiscathome/index.html' },
+      { id: 'fears-to-fathom', name: 'Fears to Fathom', path: './fears-to-fathom/index.html' },
+      { id: 'getting-over-it', name: 'Getting Over It', path: './getting-over-it/index.html' },
+      { id: 'happy-sheepies', name: 'Happy Sheepies', path: './happy-sheepies/index.html' },
+      { id: 'hotline-miami', name: 'Hotline Miami', path: './hotline-miami/index.html' },
+      { id: 'human-expenditure-program', name: 'Human Expenditure Program', path: './human-expenditure-program/index.html' },
+      { id: 'jelly-drift', name: 'Jelly Drift', path: './jelly-drift/index.html' },
+      { id: 'karlson', name: 'Karlson', path: './karlson/index.html' },
+      { id: 'kindergarten', name: 'Kindergarten', path: './kindergarten/index.html' },
+      { id: 'lacysflashgames', name: "Lacy's Flash Games", path: './lacysflashgames/index.html' },
+      { id: 'milkman-karlson', name: 'Milkman Karlson', path: './milkman-karlson/index.html' },
+      { id: 'minesweeperplus', name: 'Minesweeper Plus', path: './minesweeperplus/index.html' },
+      { id: 'omori-fixed', name: 'OMORI', path: './omori-fixed/index.html' },
+      { id: 'people-playground', name: 'People Playground', path: './people-playground/index.html' },
+      { id: 'pizza-tower', name: 'Pizza Tower', path: './pizza-tower/index.html' },
+      { id: 'raft', name: 'RAFT', path: './raft/index.html' },
+      { id: 'repo', name: 'R.E.P.O', path: './repo/index.html' },
+      { id: 'schoolboy-runaway', name: 'Schoolboy Runaway', path: './schoolboy-runaway/index.html' },
+      { id: 'slender', name: 'Slender: The Eight Pages', path: './slender/index.html' },
+      { id: 'sonic.exe', name: 'Sonic.exe', path: './sonic.exe/index.html' },
+      { id: 'speed-stars', name: 'Speed Stars', path: './speed-stars/index.html' },
+      { id: 'tattletail', name: 'Tattletail', path: './tattletail/index.html' },
+      { id: 'thats-not-my-neighbor', name: "That's Not My Neighbor", path: './thats-not-my-neighbor/index.html' },
+      { id: 'the-man-in-the-window', name: 'The Man in the Window', path: './the-man-in-the-window/index.html' },
+      { id: 'ultrakill', name: 'ULTRAKILL', path: './ultrakill/index.html' },
+      { id: 'undertale-yellow', name: 'Undertale Yellow', path: './undertale-yellow/index.html' },
+      { id: 'web-fishing', name: 'Web Fishing', path: './web-fishing/index.html' },
+      { id: 'witch-heart', name: 'Witch Heart', path: './witch-heart/index.html' },
+      { id: 'yandere-simulator', name: 'Yandere Simulator', path: './yandere-simulator/index.html' },
+      { id: 'yume-nikki', name: 'Yume Nikki', path: './yume-nikki/index.html' }
     ];
 
     const gameListEl = document.getElementById('game-list');
     const iframe = document.getElementById('game-frame');
     const titleEl = document.getElementById('current-title');
+    const searchBox = document.getElementById('search-box');
+    const errorMsg = document.getElementById('error-message');
+    const loadingSpinner = document.getElementById('loading-spinner');
+    const restartBtn = document.getElementById('restart-btn');
+    const fullscreenBtn = document.getElementById('fullscreen-btn');
 
-    function loadGame(game, buttonEl) {
-      // Clear active styling
-      document.querySelectorAll('.game-btn').forEach(btn => btn.classList.remove('active'));
-      buttonEl.classList.add('active');
+    let currentGame = null;
+    const buttons = new Map();
 
-      // Unload existing game to free WebGL context/RAM
+    function showError(message) {
+      errorMsg.textContent = message;
+      errorMsg.classList.add('show');
+      setTimeout(() => errorMsg.classList.remove('show'), 5000);
+    }
+
+    function loadGame(game, button) {
+      buttons.forEach((btn) => btn.classList.remove('active'));
+      button.classList.add('active');
+      currentGame = game;
+      loadingSpinner.style.display = 'block';
+      errorMsg.classList.remove('show');
+
       iframe.src = 'about:blank';
-
-      // Load new game path
       setTimeout(() => {
         iframe.src = game.path;
         titleEl.textContent = game.name;
-      }, 50);
+      }, 100);
     }
 
-    // Populate Sidebar
+    function filterGames(term) {
+      const q = term.toLowerCase();
+      buttons.forEach((button, id) => {
+        const game = games.find((g) => g.id === id);
+        const matches = !q || game.name.toLowerCase().includes(q);
+        button.parentElement.style.display = matches ? 'block' : 'none';
+      });
+    }
+
     games.forEach((game, index) => {
       const li = document.createElement('li');
       const btn = document.createElement('button');
       btn.className = 'game-btn';
       btn.textContent = game.name;
+      btn.title = game.name;
       btn.onclick = () => loadGame(game, btn);
       li.appendChild(btn);
       gameListEl.appendChild(li);
+      buttons.set(game.id, btn);
 
-      // Auto-load first game
-      if (index === 0) btn.click();
+      if (index === 0) {
+        setTimeout(() => btn.click(), 250);
+      }
     });
 
-    // Toolbar Functionality
-    document.getElementById('reload-btn').onclick = () => {
+    searchBox.addEventListener('input', (event) => filterGames(event.target.value));
+
+    restartBtn.onclick = () => {
+      if (!currentGame) return;
+      loadingSpinner.style.display = 'block';
       const currentSrc = iframe.src;
       iframe.src = 'about:blank';
-      setTimeout(() => iframe.src = currentSrc, 50);
+      setTimeout(() => iframe.src = currentSrc, 100);
     };
 
-    document.getElementById('fullscreen-btn').onclick = () => {
-      if (iframe.requestFullscreen) {
-        iframe.requestFullscreen();
-      } else if (iframe.webkitRequestFullscreen) {
-        iframe.webkitRequestFullscreen();
+    fullscreenBtn.onclick = async () => {
+      try {
+        if (iframe.requestFullscreen) {
+          await iframe.requestFullscreen();
+        } else if (iframe.webkitRequestFullscreen) {
+          iframe.webkitRequestFullscreen();
+        } else {
+          throw new Error('Fullscreen is not supported in this browser.');
+        }
+      } catch (err) {
+        showError(err.message || 'Fullscreen failed.');
       }
     };
+
+    iframe.onload = () => { loadingSpinner.style.display = 'none'; };
+    iframe.onerror = () => {
+      loadingSpinner.style.display = 'none';
+      if (currentGame) showError(`Failed to load ${currentGame.name}.`);
+    };
+
+    document.addEventListener('keydown', (event) => {
+      if (event.ctrlKey && event.key.toLowerCase() === 'r') {
+        event.preventDefault();
+        restartBtn.click();
+      }
+      if (event.ctrlKey && event.key.toLowerCase() === 'f') {
+        event.preventDefault();
+        fullscreenBtn.click();
+      }
+    });
   </script>
 </body>
 </html>
